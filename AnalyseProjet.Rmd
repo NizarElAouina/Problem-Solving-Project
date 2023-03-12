@@ -1,0 +1,152 @@
+---
+title: "Analyse de Projet Problem Solving"
+author: "Nizar EL AOUINA"
+date: "2022-12-31"
+output: html_document
+---
+
+## Extraire les variables actives :
+```{r}
+library("readxl")
+
+data <- read_excel("C:/Users/nizar/Desktop/S1/Problem Solving/DataProjet.xlsx")
+#data
+data.active <- data[,7:19]
+#data.active
+str(data.active)
+#data.active$Rythme_cours_stressant<-as.factor(data.active$Rythme_cours_stressant) : Turn data into factor for one column
+data.active <-data.frame(lapply(data.active,factor)) # Turn into factor all the data in the dataset
+data.active
+```
+
+## Fréquence des catégories des variables:
+```{r}
+summary(data.active)
+```
+## Visualiser les fréquences
+```{r}
+par(cex=0.1,mfrow=c(3,6))
+for (i in 1:13) {
+plot(data.active[,i], main = colnames(data.active)[i], las = 2, cex.names = 0.5,
+cex.axis = 0.5, cex.main=1)
+}
+```
+
+On remarque la présence de variables ayant des catégories avec des fréquences proches, commes les variables Rythme_cours_stressant ou Manque_preparation, voire presque égales comme le cas de la variable Niveau_etudes_soutenu. <br>
+Tandis qu'on remarque des variables ayant des fréquences de catégories lointaines comme Activites parallele, Ticherie ou encore Harcelement. Ce sont donc des variables candidates à avoir un influence sur l'analyse.
+
+## ACM
+```{r}
+library("FactoMineR")
+library("factoextra")
+res.mca <- MCA(data.active,graph=FALSE)
+res.mca
+```
+
+## Valeurs propres : 
+
+```{r}
+eig_val <- get_eigenvalue(res.mca)
+eig_val
+fviz_eig(res.mca, addlabels = TRUE) 
+```
+
+Les deux dimensions retiennent 30.2% de l'inertie totale.
+
+```{r}
+fviz_mca_ind(res.mca, repel = TRUE)
+fviz_mca_var(res.mca, repel=TRUE)
+fviz_mca_var (res.mca, choice = "mca.cor", repel = TRUE)
+fviz_mca_biplot (res.mca, repel = TRUE) # repel = TRUE: to avoid overplotting text labels
+```
+
+La proximité géographiue entre individus et entre variables peut reflèter une certaine ressemblance.
+
+<br> Dans le graphique des catégories, on visualise que les catégories qui s'opposent sont placés dans des sens opposés comme les catégories Rythme_yes et Rythme_no, et Difficile_yes avec Difficile_no.<br>
+On remarque aussi que les catégories Harcelement_yes et Tricherie_yes sont les mieux représentées par le plan des facteurs.<br>
+Dans le graphique des variables, on remarque que :Rythme_cours_stressant Niveau_etudes_soutenu sont fortement corrélées avec la Dim1. Les coordonées de ces deux variables sont également proches, et dans ce cas, reflètent une certaine ressemblance entre les variables. (Dans une formation donnée, si le niveau d'études est difficile, le rythme de cours est globalement stressant, ce sont donc deux variables fortement corrélées). <br>
+Les variables les plus corrélées à la Dim.2 sont Harcelement et Tricherie et Manque_engagement_etudiants. Par ailleurs, les variables tricherie et Manque_engagement_etudiants ont un certaine similarité, dans le sens où le manque d'engagement des étudiants pousse ces derniers à commetre de la tricherie et du plagiat.
+
+## Qualité de représentation des catégories des variables :
+
+```{r}
+fviz_mca_var(res.mca, col.var = "cos2",
+             gradient.cols = c("white", "blue", "red"), 
+             repel = TRUE)
+res.mca$var$cos2
+```
+
+Ce graphique permet de montrer que les catégories des variables Rythme_cours_stressant et Niveau_etudes_soutenu sont les mieux représentées par le plan des facteurs. On remarque aussi que kes variables catégories Tricherie_yes et Harcelement_yes sont également bien représentées. <br>
+Pour les autres catgéories, elles sont moyennement représentées voire peu représentées, et doivent donc être interprétées avec prudence.
+
+```{r}
+library(corrplot)
+corrplot(res.mca$var$cos2, is.corr=FALSE)
+fviz_cos2(res.mca, choice = "var", axes = 1:2, addlabels = TRUE)
+```
+
+
+En plus des catégories les plus corrélées citées en haut, on remarque que Tricherie_no est bien représentée par la Dim.2.
+
+## Contribution des variables : 
+```{r}
+# Contributions des variables à la dimension 1. l'argument "top = 15" pour montrer le top 15 des catégories contribuant aux dimensions    
+fviz_contrib (res.mca, choice = "var", axes = 1, top = 15)  
+# Contributions des variables à la dimension 2    
+fviz_contrib (res.mca, choice = "var", axes = 2, top = 15)  
+# Contribution totale aux dimensions 1 et 2   
+fviz_contrib(res.mca, choice = "var", axes = 1:2, top = 15) 
+```
+
+
+#Description des facteurs :
+```{r}
+desc.fact <- dimdesc (res.mca, axes = c(1,2))
+desc.fact
+fviz_ellipses(res.mca, colnames(data.active), geom = "point")
+```
+
+
+```{r}
+data2 <- data[2:19]
+#data2
+data2$Sexe<-as.factor(data2$Sexe)
+data2$Niveau<-as.factor(data2$Niveau)
+data2$Age<-as.factor(data2$Age)
+data2$Situation<-as.factor(data2$Situation)
+data2$Universite<-as.factor(data2$Universite)
+data2
+res.mca2 <- MCA (data2, quali.sup = 1:5, graph = FALSE)
+res.mca2
+plot(res.mca2,invisible=c("var","quali.sup"),cex=0.7) #To plot the graph of individuals
+plot(res.mca2,invisible=c("ind","quali.sup")) #To plot the graph of active categories
+plot(res.mca2,invisible="quali.sup") #To plot the graph  of superimposed representations
+plot(res.mca2,invisible="ind") #To plot the graph of active and supplementary categories
+plot(res.mca2,invisible=c("ind","var")) #To plot the graph  of supplementary categories
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
